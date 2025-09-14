@@ -22,3 +22,7 @@
 ```bash
 pip install torch torchvision pandas numpy tqdm scikit-learn matplotlib seaborn
 ```
+## 資料獲取
+```
+https://www.kaggle.com/datasets/mondejar/mitbih-database
+```
