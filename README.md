@@ -27,21 +27,22 @@ pip install torch torchvision pandas numpy tqdm scikit-learn matplotlib seaborn
 https://www.kaggle.com/datasets/mondejar/mitbih-database
 ```
 ## 訓練成果
-
+根據提供的分類報告、混淆矩陣和 ROC 曲線，我們可以對這次在 MIT-BIH 數據集上的模型訓練結果進行全面評估。總體來看，模型表現出色，達到了 93.39% 的整體準確率，在各個心律不整類別的辨識上都具有相當高的水準。
 Test Accuracy: 0.9339
 
-Classification Report:
-              precision    recall  f1-score   support
+### **Classification Report**
 
-           F     0.9568    0.9451    0.9509       164
-           N     0.8659    0.9467    0.9045       150
-           Q     0.9212    0.9947    0.9565       188
-           S     0.9758    0.8521    0.9098       142
-           V     0.9664    0.9114    0.9381       158
-
-    accuracy                         0.9339       802
-   macro avg     0.9372    0.9300    0.9320       802
-weighted avg     0.9367    0.9339    0.9337       802
+| Class        | Precision | Recall | F1-Score | Support |
+| :----------- | :-------- | :----- | :------- | :------ |
+| **F** | 0.9568    | 0.9451 | 0.9509   | 164     |
+| **N** | 0.8659    | 0.9467 | 0.9045   | 150     |
+| **Q** | 0.9212    | 0.9947 | 0.9565   | 188     |
+| **S** | 0.9758    | 0.8521 | 0.9098   | 142     |
+| **V** | 0.9664    | 0.9114 | 0.9381   | 158     |
+|              |           |        |          |         |
+| **Accuracy** |           |        | 0.9339   | 802     |
+| **Macro Avg**| 0.9372    | 0.9300 | 0.9320   | 802     |
+| **Weighted Avg**| 0.9367    | 0.9339 | 0.9337   | 802     |
 
 <img width="2772" height="2562" alt="confusion_matrix_percentage" src="https://github.com/user-attachments/assets/957adf4e-1c62-4921-b514-a47316d975a0" />
 <img width="3037" height="2331" alt="roc_curve" src="https://github.com/user-attachments/assets/e2076458-df8a-46d8-a969-4ae5e232a89e" />
