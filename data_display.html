@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即時心電圖監控儀表板</title>
+    <!-- 引入 Plotly.js 用於繪圖 -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background-color: #ffffff;
+            padding: 15px 30px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #1890ff;
+        }
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 20px;
+            gap: 20px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .left-panel {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .right-panel {
+            flex: 2;
+            overflow-y: auto;
+        }
+        #ecg-chart {
+            flex: 1;
+            min-height: 300px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .status-item {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        .status-item h3 {
+            margin: 0 0 10px 0;
+            font-size: 1em;
+            color: #666;
+        }
+        .status-item p {
+            margin: 0;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        thead th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #1890ff;
+            color: white;
+            font-size: 0.9em;
+        }
+        .btn-danger {
+            background-color: #ff4d4f;
+        }
+        #clear-history-btn {
+            font-size: 0.9em;
+            padding: 8px 16px;
+        }
+        /* Modal (彈出視窗) 樣式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 700px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ECG 即時監控儀表板</h1>
+        <button id="clear-history-btn" class="btn btn-danger">清空歷史紀錄</button>
+    </header>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="card" style="flex: 2;">
+                <h2>即時心電圖波形 (最多顯示 5000 點)</h2>
+                <div id="ecg-chart"></div>
+            </div>
+            <div class="card">
+                <h2>即時狀態</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <h3>連線狀態</h3>
+                        <p id="connection-status">連線中...</p>
+                    </div>
+                    <div class="status-item">
+                        <h3>最新預測</h3>
+                        <p id="last-prediction">-</p>
+                    </div>
+                    <div class="status-item">
+                        <h3>心搏總數</h3>
+                        <p id="heartbeat-count">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card right-panel">
+            <h2>歷史紀錄</h2>
+            <div style="flex: 1; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>時間戳</th>
+                            <th>預測結果</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                        <!-- 歷史資料將會動態插入此處 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 彈出視窗 HTML -->
+    <div id="waveform-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>心搏波形詳圖</h2>
+            <div id="modal-chart"></div>
+        </div>
+    </div>
+
+    <script>
+        const host = location.host;
+
+        // --- WebSocket for Live Data ---
+        const liveWs = new WebSocket(`ws://${host}/ws`);
+        const connectionStatusEl = document.getElementById('connection-status');
+        const lastPredictionEl = document.getElementById('last-prediction');
+        const heartbeatCountEl = document.getElementById('heartbeat-count');
+
+        // ============================ 修改部分：繪圖邏輯 ============================
+        let chartDataBuffer = [];
+        const MAX_CHART_POINTS = 3100;
+
+        // 初始化一個空的圖表
+        Plotly.newPlot('ecg-chart', [{
+            y: [],
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#1890ff' }
+        }], {
+            margin: { t: 20, b: 40, l: 40, r: 20 },
+            xaxis: { title: '取樣點', range: [0, MAX_CHART_POINTS] },
+            yaxis: { title: '振幅' }
+        });
+
+        liveWs.onopen = function(event) {
+            connectionStatusEl.textContent = '已連線';
+            connectionStatusEl.style.color = '#52c41a';
+        };
+
+        liveWs.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            const predictions = JSON.parse(data.predictions);
+            const newEcgData = data.ecg_data;
+
+            // 將新收到的數據塊 (約512點) 連接到緩衝區末尾
+            chartDataBuffer = chartDataBuffer.concat(newEcgData);
+
+            // 如果緩衝區長度超過最大值，則從開頭移除一個數據塊以實現平移
+            // 使用 newEcgData.length 確保移除的點數與加入的點數相同
+            if (chartDataBuffer.length > MAX_CHART_POINTS) {
+                const shiftAmount = newEcgData.length > 0 ? newEcgData.length : 512;
+                chartDataBuffer.splice(0, shiftAmount); // 從陣列開頭移除舊的數據塊
+            }
+
+            // 使用 Plotly.newPlot 強制重新繪圖，以確保 layout 被正確應用
+            Plotly.newPlot('ecg-chart', [{
+                y: chartDataBuffer, // 使用更新後的緩衝區繪圖
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#1890ff' }
+            }], {
+                margin: { t: 20, b: 40, l: 40, r: 20 },
+                xaxis: { title: '取樣點', range: [0, MAX_CHART_POINTS] },
+                yaxis: { title: '振幅' }
+            });
+            
+            // 更新狀態顯示 (這部分邏輯不變)
+            if (predictions.length > 0) {
+                lastPredictionEl.textContent = predictions[predictions.length - 1];
+            }
+            heartbeatCountEl.textContent = (parseInt(heartbeatCountEl.textContent) || 0) + predictions.length;
+        };
+        // ========================== 修改結束 ==========================
+
+        liveWs.onclose = function(event) {
+            connectionStatusEl.textContent = '已斷線';
+            connectionStatusEl.style.color = '#ff4d4f';
+        };
+
+        // --- WebSocket for History Data ---
+        const historyWs = new WebSocket(`ws://${host}/ws1`);
+
+        historyWs.onmessage = function(event) {
+            try {
+                const historyData = JSON.parse(event.data);
+                if (historyData.error) {
+                    console.error("從伺服器收到錯誤:", historyData.error);
+                    return;
+                }
+                updateHistoryTable(historyData);
+            } catch (e) {
+                console.error("解析歷史資料時發生錯誤:", e);
+            }
+        };
+
+        function updateHistoryTable(data) {
+            const tableBody = document.getElementById('history-table-body');
+            tableBody.innerHTML = '';
+            data.forEach(item => {
+                const row = tableBody.insertRow();
+                
+                const cellTimestamp = row.insertCell(0);
+                const cellPrediction = row.insertCell(1);
+                const cellAction = row.insertCell(2);
+
+                const timestamp = new Date(item.timestamp);
+                cellTimestamp.textContent = timestamp.toLocaleString('zh-TW', { hour12: false });
+                cellPrediction.textContent = item.prediction;
+
+                const viewBtn = document.createElement('button');
+                viewBtn.textContent = '查看波形';
+                viewBtn.className = 'btn';
+                viewBtn.onclick = () => showWaveformModal(item.seg_data, item.prediction, item.timestamp);
+                cellAction.appendChild(viewBtn);
+            });
+        }
+        
+        // --- Modal (彈出視窗) 相關功能 ---
+        const modal = document.getElementById('waveform-modal');
+        const closeBtn = document.querySelector('.close-btn');
+
+        function showWaveformModal(segData, prediction, timestamp) {
+            const date = new Date(timestamp);
+            const title = `預測: ${prediction} (${date.toLocaleTimeString('zh-TW')})`;
+            
+            Plotly.newPlot('modal-chart', [{
+                y: segData,
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#1890ff' }
+            }], {
+                title: title,
+                margin: { t: 40, b: 40, l: 40, r: 20 },
+                xaxis: { title: '取樣點 (368 points)' },
+                yaxis: { title: '振幅' }
+            });
+            modal.style.display = 'flex';
+        }
+
+        closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (event) => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        };
+        
+        // --- 清空歷史紀錄按鈕功能 ---
+        document.getElementById('clear-history-btn').addEventListener('click', async () => {
+            if (confirm('您確定要清空所有歷史紀錄嗎？此操作無法復原。')) {
+                try {
+                    const response = await fetch('/clear-table', { method: 'POST' });
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        alert(`成功刪除 ${result.deleted_count} 筆紀錄。`);
+                        document.getElementById('history-table-body').innerHTML = '';
+                    } else {
+                        alert('清除失敗: ' + result.message);
+                    }
+                } catch (error) {
+                    alert('請求伺服器時發生錯誤。');
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
+
