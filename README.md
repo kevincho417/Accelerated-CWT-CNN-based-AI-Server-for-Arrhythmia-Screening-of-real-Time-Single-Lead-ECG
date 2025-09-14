@@ -28,9 +28,8 @@ https://www.kaggle.com/datasets/mondejar/mitbih-database
 ```
 ## 訓練成果
 根據提供的分類報告、混淆矩陣和 ROC 曲線，我們可以對這次在 MIT-BIH 數據集上的模型訓練結果進行全面評估。總體來看，模型表現出色，達到了 93.39% 的整體準確率，在各個心律不整類別的辨識上都具有相當高的水準。
-Test Accuracy: 0.9339
 
-### **Classification Report**
+### **Classification Evaluation Report**
 
 | Class        | Precision | Recall | F1-Score | Support |
 | :----------- | :-------- | :----- | :------- | :------ |
@@ -39,7 +38,7 @@ Test Accuracy: 0.9339
 | **Q** | 0.9212    | 0.9947 | 0.9565   | 188     |
 | **S** | 0.9758    | 0.8521 | 0.9098   | 142     |
 | **V** | 0.9664    | 0.9114 | 0.9381   | 158     |
-|              |           |        |          |         |
+
 | **Accuracy** |           |        | 0.9339   | 802     |
 | **Macro Avg**| 0.9372    | 0.9300 | 0.9320   | 802     |
 | **Weighted Avg**| 0.9367    | 0.9339 | 0.9337   | 802     |
