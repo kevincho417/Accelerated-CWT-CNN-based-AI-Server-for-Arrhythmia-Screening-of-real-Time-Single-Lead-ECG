@@ -127,3 +127,9 @@
 
 5.  **打開前端儀表板**:
     在瀏覽器中開啟 `http://<您的伺服器IP>:7000`。您應該能看到即時更新的 ECG 波形與分析結果。
+
+#Demo video
+
+
+https://github.com/user-attachments/assets/73958386-3d68-4f42-95ba-b1a6f683f9d3
+
