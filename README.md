@@ -1,110 +1,129 @@
-# 即時心電圖 (ECG) 監控儀表板運行指南
+# Real-Time ECG Monitoring and AI Analysis System (即時心電圖監控與 AI 分析系統)
 
-這是一個基於 FastAPI 的即時心電圖 (ECG) 監控應用程式。它透過 WebSocket 接收即時 ECG 數據，連接到 Triton Inference Server 進行心搏分類，並將結果儲存到 MongoDB 中，同時在網頁儀表板上視覺化波形與分析結果。
+## 專案簡介
+
+本專案是一個完整的即時心電圖 (ECG) 監控與分析解決方案。它能從硬體設備即時採集 ECG 訊號，透過後端伺服器進行訊號處理與 R 波偵測，並呼叫 NVIDIA Triton Inference Server 上的深度學習模型進行心搏分類，最終將結果即時呈現在網頁儀表板上，同時將分析結果儲存於 MongoDB 資料庫。
 
 ## 系統架構
 
-本系統由以下幾個核心組件構成：
+系統由五個核心組件構成，協同運作完成從數據採集到視覺化呈現的完整流程。
 
-1.  **前端 (data_display.html)**：使用者介面，運行在瀏覽器中。透過 WebSocket 與後端進行雙向通訊，以顯示即時波形和歷史數據。
-2.  **後端 (app.py)**：基於 FastAPI 的 Python 伺服器，是整個系統的中樞。它負責：
-    * 提供前端網頁。
-    * 接收來自感測器的 HTTP POST 請求。
-    * 管理 WebSocket 連線，向所有客戶端廣播即時數據。
-    * 對 ECG 數據進行預處理（濾波、R 波偵測、訊號切分）。
-    * 與 Triton Inference Server 通訊，執行模型推論。
-    * 將分析結果存入 MongoDB 資料庫。
-3.  **Triton Inference Server**：一個獨立的推論伺服器，用於託管並執行 `CWT_CNN` 模型，對切分後的心搏訊號進行分類。
-4.  **MongoDB**：一個 NoSQL 資料庫，用於儲存每一次心搏的波形數據、預測結果和時間戳。
 
-## 前置準備 (Prerequisites)
+---
 
-在運行此應用程式之前，請確保以下環境和服務已經準備就緒：
+## 核心組件詳解
 
-1.  **Python 環境**:
-    * 建議使用 Python 3.8 或更高版本。
+### 1. 後端伺服器 (`app.py`)
 
-2.  **MongoDB 資料庫**:
-    * 確保 MongoDB 正在運行。
-    * 應用程式預設會嘗試連接到 `mongodb://192.168.50.28:27017`。如有需要，請修改 `app.py` 中的 `MONGO_DETAILS` 變數。
+-   **框架**: FastAPI
+-   **功能**:
+    -   **API 端點**:
+        -   `POST /submit`: 接收由 `client_app.py` 傳來的原始 ECG 數據塊。
+        -   `GET /`: 提供前端儀表板的 HTML 頁面。
+        -   `POST /clear-table`: 清空 MongoDB 中的歷史紀錄。
+    -   **即時通訊**:
+        -   `WebSocket /ws`: 向所有前端客戶端廣播即時的 ECG 波形、R 波位置和預測結果。
+        -   `WebSocket /ws1`: 定期從 MongoDB 讀取歷史數據並推送給前端。
+    -   **數據處理**:
+        -   管理數據緩衝區，確保數據流的連續性。
+        -   呼叫 `filter_fir1` 進行訊號濾波。
+        -   呼叫 `segment` 進行 R 波偵測與心搏切分。
+    -   **AI 推論調度**: 呼叫 `trt_CNN.py` 中的 `CNN_processing2` 函式，將切分好的心搏樣本送至 Triton Server 進行推論。
+    -   **資料庫操作**: 使用 `motor` 非同步驅動程式，將分析結果（波形、預測、時間戳）存入 MongoDB。
 
+### 2. 前端儀表板 (`data_display.html`)
+
+-   **技術**: HTML, JavaScript, CSS, [Plotly.js](https://plotly.com/javascript/)
+-   **功能**:
+    -   **即時圖表**: 透過 `/ws` WebSocket 接收數據，使用 Plotly.js 繪製一個可平滑滾動的 ECG 波形圖。
+    -   **狀態顯示**: 顯示連線狀態、最新預測結果和心搏總數等即時資訊。
+    -   **歷史紀錄**: 透過 `/ws1` WebSocket 接收數據，將歷史預測結果動態呈現在表格中。
+    -   **互動功能**:
+        -   點擊「查看波形」按鈕可彈出一個視窗，顯示特定心搏的詳細波形。
+        -   點擊「清空歷史紀錄」按鈕可觸發後端的數據清除功能。
+
+### 3. 數據採集客戶端 (`client_app.py`)
+
+-   **功能**:
+    -   使用 `pyserial` 函式庫連接指定的序列埠（COM Port），讀取 ECG 設備數據。
+    -   將讀取的數據收集到一個緩衝區，當數量達到 `SAMPLES_PER_CHUNK` (512) 時，打包成 JSON 陣列。
+    -   使用 `requests` 函式庫透過 HTTP POST 請求將數據批次傳送到後端伺服器的 `/submit` 端點。
+    -   包含完善的錯誤處理機制，應對序列埠連接失敗、數據解碼錯誤和網路請求異常等情況。
+
+### 4. Triton 推論客戶端 (`trt_CNN.py`)
+
+-   **功能**:
+    -   作為 NVIDIA Triton Inference Server 的 gRPC 客戶端。
+    -   定義了目標模型名稱 (`CWT_CNN`)、輸入 (`input__0`) 與輸出 (`output__0`) 的格式。
+    -   `CNN_processing` 函式接收多個心搏訊號段（`seg_list`），將它們轉換為符合模型輸入的格式 (`[1, 1, 368]`, FP32)。
+    -   以**非同步**方式將請求發送到 Triton Server，並透過回呼函式處理返回的結果。
+    -   解析模型的輸出，使用 `np.argmax` 找到最大機率的索引，並將其對應到預設的標籤 (`['F','Q' , 'N','V', 'S']`)。
+
+---
+
+## 環境設置與執行指南
+
+### 前置需求
+
+1.  **Python**: 3.8+
+2.  **MongoDB**: 一個正在運行的 MongoDB 實例。
 3.  **NVIDIA Triton Inference Server**:
-    * 確保 Triton 伺服器正在運行。
-    * 伺服器上必須已經成功載入名為 `CWT_CNN` 的模型。
-    * 模型輸入名稱應為 `input__0`，輸出名稱為 `output__0`。
-    * 應用程式預設會嘗試連接到 `192.168.50.28:8001`。如有需要，請修改 `trt_CNN.py` 中的 `--url` 預設參數。
+    -   已安裝並正在運行。
+    -   已成功部署名為 `CWT_CNN` 的模型，且模型的輸入/輸出名稱與 `trt_CNN.py` 中設定的一致。
+4.  **ECG 硬體設備**: 一個能透過序列埠輸出數據的 ECG 設備。
 
-4.  **專案檔案**:
-    * 確保以下檔案位於同一個專案目錄下：
-        * `app.py` (主應用程式)
-        * `trt_CNN.py` (Triton 客戶端)
-        * `data_display.html` (前端頁面)
-        * `segment.py` (R 波偵測模組，**需自行準備**)
-        * `tfa_morlet_112m.py` (訊號濾波模組，**需自行準備**)
+### 安裝步驟
 
-## 安裝步驟
+1.  **複製專案**:
+    ```bash
+    git clone <your-repository-url>
+    cd <your-project-directory>
+    ```
 
-1.  **建立虛擬環境 (建議)**
+2.  **建立虛擬環境** (建議):
     ```bash
     python -m venv venv
     source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
     ```
 
-2.  **安裝 Python 依賴套件**
-    您可以將以下內容儲存為 `requirements.txt` 檔案，然後執行 `pip install -r requirements.txt`。
-
-    **requirements.txt:**
-    ```
-    fastapi
-    uvicorn[standard]
-    numpy
-    motor
-    tritonclient[grpc]
-    ```
-
-    **安裝指令:**
+3.  **安裝 Python 依賴套件**:
     ```bash
-    pip install -r requirements.txt
+    pip install fastapi "uvicorn[standard]" motor numpy pyserial requests tritonclient[grpc]
     ```
 
-## 運行應用程式
+### 組態設定
 
-1.  **啟動 FastAPI 伺服器**
-    在您的終端機中，切換到專案目錄，並執行以下指令：
+在執行前，請根據您的環境修改以下檔案中的設定：
+
+1.  **`app.py`**:
+    -   `MONGO_DETAILS`: 修改為您的 MongoDB 連線位址。
+
+2.  **`client_app.py`**:
+    -   `SERVER_URL`: 修改為 `app.py` 伺服器的 IP 位址與埠號。
+    -   `SERIAL_PORT`: 修改為您的 ECG 設備所連接的正確 COM Port 名稱。
+    -   `BAUD_RATE`: 確保鮑率與您的設備設定相符。
+
+3.  **`trt_CNN.py`**:
+    -   `--url` (或 `default` 值): 修改為您的 Triton Server 的 IP 位址與 gRPC 埠號 (預設 8001)。
+
+### 執行順序
+
+請務必按以下順序啟動各個服務：
+
+1.  **啟動 MongoDB 資料庫**。
+
+2.  **啟動 NVIDIA Triton Inference Server** 並確認 `CWT_CNN` 模型已載入成功。
+
+3.  **啟動後端 FastAPI 伺服器**:
+    在專案根目錄下執行：
     ```bash
     uvicorn app:app --host 0.0.0.0 --port 7000 --reload
     ```
-    * `--host 0.0.0.0`: 使伺服器可以被區域網路中的其他裝置訪問。
-    * `--port 7000`: 指定伺服器運行的埠號。
-    * `--reload`: 開發模式，當程式碼變動時會自動重啟伺服器。
 
-2.  **訪問儀表板**
-    伺服器成功啟動後，在您的瀏覽器中開啟以下網址：
-    `http://<YOUR_SERVER_IP>:7000`
-    (如果是在本機運行，可以使用 `http://127.0.0.1:7000` 或 `http://localhost:7000`)
+4.  **啟動數據採集客戶端**:
+    ```bash
+    python client_app.py
+    ```
 
-3.  **發送 ECG 數據**
-    儀表板本身不產生數據。您需要另一個程式或裝置，將 ECG 數據以 HTTP POST 請求的方式發送到以下端點：
-    * **URL**: `http://<YOUR_SERVER_IP>:7000/submit`
-    * **Method**: `POST`
-    * **Body (JSON)**: 一個包含 ECG 原始數據點的陣列，例如 `[20, 22, 21, ..., 25]`。
-
-    當後端收到數據後，會進行處理，並透過 WebSocket 將結果即時更新到所有已連接的儀表板頁面上。
-
-## 檔案功能說明
-
-* `app.py`:
-    * **核心邏輯**：接收 HTTP 請求，管理 WebSocket 連線。
-    * **數據流**：調用 `tfa_morlet_112m` 進行濾波，`segment` 進行 R 波偵測，再將切分好的心搏數據傳遞給 `trt_CNN` 進行推論。
-    * **資料庫互動**：使用 `motor` 異步函式庫將結果寫入 MongoDB。
-
-* `trt_CNN.py`:
-    * **Triton 客戶端**：封裝了與 Triton Inference Server 的 gRPC 通訊邏輯。
-    * `CNN_processing` **函式**：接收一個或多個 ECG 心搏片段，以非同步方式發送推論請求，並回傳模型的預測標籤列表 (`['F', 'Q', 'N', 'V', 'S']`)。
-
-* `data_display.html`:
-    * **使用者介面**：使用 HTML, CSS 和 JavaScript 建立的單頁應用程式。
-    * **即時繪圖**：使用 `Plotly.js` 繪製即時 ECG 波形。
-    * **WebSocket 通訊**：
-        * `/ws`：接收即時波形、R 波位置和預測結果，用於更新主圖表。
-        * `/ws1`：定期從後端獲取歷史紀錄，並更新歷史表格。
+5.  **打開前端儀表板**:
+    在瀏覽器中開啟 `http://<您的伺服器IP>:7000`。您應該能看到即時更新的 ECG 波形與分析結果。
