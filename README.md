@@ -26,3 +26,9 @@ pip install torch torchvision pandas numpy tqdm scikit-learn matplotlib seaborn
 ```
 https://www.kaggle.com/datasets/mondejar/mitbih-database
 ```
+## 訓練成果
+
+
+<img width="2772" height="2562" alt="confusion_matrix_percentage" src="https://github.com/user-attachments/assets/957adf4e-1c62-4921-b514-a47316d975a0" />
+<img width="3037" height="2331" alt="roc_curve" src="https://github.com/user-attachments/assets/e2076458-df8a-46d8-a969-4ae5e232a89e" />
+[test_report.txt](https://github.com/user-attachments/files/22319580/test_report.txt)
