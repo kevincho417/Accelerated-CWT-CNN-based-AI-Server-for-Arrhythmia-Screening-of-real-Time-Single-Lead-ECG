@@ -1,12 +1,12 @@
-#即時心電圖 (ECG) 監控儀表板運行指南
-##這是一個基於 FastAPI 的即時心電圖 (ECG) 監控應用程式。它透過 WebSocket 接收即時 ECG 數據，連接到 Triton Inference Server 進行心搏分類，並將結果儲存到 MongoDB 中，同時在網頁儀表板上視覺化波形與分析結果。
+# 即時心電圖 (ECG) 監控儀表板運行指南
+## 這是一個基於 FastAPI 的即時心電圖 (ECG) 監控應用程式。它透過 WebSocket 接收即時 ECG 數據，連接到 Triton Inference Server 進行心搏分類，並將結果儲存到 MongoDB 中，同時在網頁儀表板上視覺化波形與分析結果。
 
-##系統架構
+## 系統架構
 本系統由以下幾個核心組件構成：
 
-###前端 (data_display.html)：使用者介面，運行在瀏覽器中。透過 WebSocket 與後端進行雙向通訊，以顯示即時波形和歷史數據。
+### 前端 (data_display.html)：使用者介面，運行在瀏覽器中。透過 WebSocket 與後端進行雙向通訊，以顯示即時波形和歷史數據。
 
-###後端 (app.py)：基於 FastAPI 的 Python 伺服器，是整個系統的中樞。它負責：
+### 後端 (app.py)：基於 FastAPI 的 Python 伺服器，是整個系統的中樞。它負責：
 
 提供前端網頁。
 
