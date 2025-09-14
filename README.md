@@ -42,6 +42,18 @@ https://www.kaggle.com/datasets/mondejar/mitbih-database
 | **Accuracy** |           |        | 0.9339   | 802     |
 | **Macro Avg**| 0.9372    | 0.9300 | 0.9320   | 802     |
 | **Weighted Avg**| 0.9367    | 0.9339 | 0.9337   | 802     |
-
-<img width="2772" height="2562" alt="confusion_matrix_percentage" src="https://github.com/user-attachments/assets/957adf4e-1c62-4921-b514-a47316d975a0" />
+### 混淆矩陣 (Confusion Matrix)
+- 高準確率類別
+  - Q 類：99.47%
+  - N 類：94.67%
+  - F 類：94.51%
+- 主要混淆點
+  - S → N：10.56%
+  - V → F：3.16%
+  - N → Q：3.33%
+<img width="1000" height="1000" alt="confusion_matrix_percentage" src="https://github.com/user-attachments/assets/957adf4e-1c62-4921-b514-a47316d975a0" />
+### ROC 曲線與 AUC 值
+- 單一類別 AUC：F, N, Q, S, V 均 ≥ 0.99
+- Q 類：AUC = 1.00
+- 宏平均 AUC：0.99
 <img width="3037" height="2331" alt="roc_curve" src="https://github.com/user-attachments/assets/e2076458-df8a-46d8-a969-4ae5e232a89e" />
