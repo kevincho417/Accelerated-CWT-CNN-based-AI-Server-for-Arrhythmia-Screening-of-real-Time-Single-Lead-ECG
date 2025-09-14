@@ -56,4 +56,4 @@ https://www.kaggle.com/datasets/mondejar/mitbih-database
 - 單一類別 AUC：F, N, Q, S, V 均 ≥ 0.99
 - Q 類：AUC = 1.00
 - 宏平均 AUC：0.99
-<img width="3037" height="2331" alt="roc_curve" src="https://github.com/user-attachments/assets/e2076458-df8a-46d8-a969-4ae5e232a89e" />
+<img width="1000" height="1000" alt="roc_curve" src="https://github.com/user-attachments/assets/e2076458-df8a-46d8-a969-4ae5e232a89e" />
