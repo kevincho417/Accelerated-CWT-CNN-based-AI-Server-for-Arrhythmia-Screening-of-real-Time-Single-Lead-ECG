@@ -8,6 +8,7 @@
 
 系統由五個核心組件構成，協同運作完成從數據採集到視覺化呈現的完整流程。
 
+<img width="827" height="381" alt="image" src="https://github.com/user-attachments/assets/65590049-32d4-4794-bbec-553ab40cb220" />
 
 ---
 
